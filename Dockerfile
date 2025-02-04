@@ -1,22 +1,37 @@
-# Usa una imagen base oficial de Node.js
+# Etapa 1: Construcción
+FROM node:18-alpine AS builder
+
+# Establece el directorio de trabajo
+WORKDIR /app
+
+# Copia los archivos de dependencias
+COPY package*.json ./
+
+# Instala todas las dependencias (incluyendo devDependencies)
+RUN npm install
+
+# Copia el resto del código
+COPY . .
+
+# Compila el proyecto
+RUN npm run build
+
+# Etapa 2: Imagen de producción
 FROM node:18-alpine
 
 # Establece el directorio de trabajo
 WORKDIR /app
 
-# Copia package.json y package-lock.json (o yarn.lock)
+# Copia solo package.json y package-lock.json (o yarn.lock)
 COPY package*.json ./
 
-# Instala las dependencias
+# Instala únicamente las dependencias de producción
 RUN npm install --production
 
-# Copia el resto del código
-COPY . .
+# Copia los archivos compilados desde la etapa builder
+COPY --from=builder /app/dist ./dist
 
-# Compila el proyecto (si usas TypeScript, por ejemplo)
-RUN npm run build
-
-# Expone el puerto en el que corre la app
+# Expone el puerto en el que corre la aplicación
 EXPOSE 3000
 
 # Inicia la aplicación
