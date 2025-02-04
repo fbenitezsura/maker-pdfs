@@ -3,6 +3,7 @@
 /node_modules
 /build
 .env
+yarn.lock
 # Logs
 logs
 *.log
