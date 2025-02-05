@@ -3,8 +3,8 @@ module.exports = {
     {
       name: 'make-pdf',
       script: 'dist/main.js',
-      instances: 1, // Puedes ajustar la cantidad de instancias según tus necesidades
-      exec_mode: 'fork', // "cluster" si quieres utilizar múltiples núcleos
+      instances: 3, // Puedes ajustar la cantidad de instancias según tus necesidades
+      exec_mode: 'cluster', // "cluster" si quieres utilizar múltiples núcleos
       watch: false,
       env: {
         NODE_ENV: 'development',
