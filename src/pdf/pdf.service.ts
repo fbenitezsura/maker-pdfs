@@ -138,6 +138,7 @@ export class PdfService {
           : step === 4
             ? travel.travelTimeReception
             : travel.travelTime;
+      console.log('timeUse', timeUse);
       const normalizedTravelTime = this.normalizeTime(timeUse);
 
       // Obtener datos de la ruta y detalles adicionales
@@ -157,6 +158,7 @@ export class PdfService {
         travel.personDelivery,
         travel.personReceive,
       );
+      console.log('datos del chofer', chofer);
       // Si se trata de la sección chofer y no es step 4, incluir la selfie
       if (step !== 4 && detailInfo === 'chofer') {
         const wixImageUrlSelfie = chofer?.detailRegister?.selfie;
@@ -210,6 +212,22 @@ export class PdfService {
           y: pageHeight - 70,
           size: fontSize,
           font: font,
+          color: rgb(0, 0, 0),
+        });
+      }
+      if (step !== 4 && detailInfo === 'chofer') {
+        page.drawText('Télefono:', {
+          x: 50,
+          y: pageHeight - 90,
+          size: fontSize,
+          font: helveticaBoldFont,
+          color: rgb(0, 0, 0),
+        });
+        page.drawText(detailText.phoneKey, {
+          x: 110,
+          y: pageHeight - 90,
+          size: fontSize,
+          font: helveticaBoldFont,
           color: rgb(0, 0, 0),
         });
       }
@@ -777,13 +795,14 @@ export class PdfService {
       const colWidth = 250;
       const tableWidth = colWidth * 2;
       const tableHeight = rowHeight * 6;
+      console.log('marca', travel?.brandVehicle);
       const datosTabla = [
-        ['Tipo', travel?.typeVehicle],
-        ['Marca', travel?.brandVehicle],
-        ['Año', travel?.yearVehicle],
-        ['Matrícula', travel?.patentVehicle],
-        ['Modelo', travel?.modelVehicle],
-        ['Bastidor', travel?.bastidor],
+        ['Tipo', travel?.typeVehicle ?? 'Sin tipo'],
+        ['Marca', travel?.brandVehicle ?? 'Sin marca'],
+        ['Año', travel?.yearVehicle ?? 'Sin año'],
+        ['Matrícula', travel?.patentVehicle ?? 'Sin matrícula'],
+        ['Modelo', travel?.modelVehicle ?? 'Sin modelo'],
+        ['Bastidor', travel?.bastidor ?? 'Sin bastidor'],
       ];
       datosTabla.forEach((fila, filaIndex) => {
         const x = tableLeft;
@@ -817,6 +836,7 @@ export class PdfService {
           const y = tableTop - (filaIndex + 0.5) * rowHeight - fontSize / 2;
           const selectedFont = colIndex === 0 ? helveticaBoldFont : font;
           const xUse = colIndex === 0 ? x : x - 100;
+          console.log('celda', celda);
           page.drawText(celda, {
             x: xUse,
             y,
@@ -1400,18 +1420,21 @@ export class PdfService {
       });
       currentY -= 20;
       const pngImageBytes = addDniClient
-        ? travel.signatureEndClient.split(',')[1]
-        : travel.signatureStartClient.split(',')[1];
-      const signatureClientImage = await pdfDoc.embedPng(
-        Buffer.from(pngImageBytes, 'base64'),
-      );
-      const xSignature = addBothSignature ? 0 : 140;
-      page.drawImage(signatureClientImage, {
-        x: xSignature,
-        y: 280,
-        width: 300,
-        height: 100,
-      });
+        ? travel?.signatureEndClient?.split(',')[1]
+        : travel?.signatureStartClient?.split(',')[1];
+      console.log('pngImageBytes', pngImageBytes);
+      if (pngImageBytes) {
+        const signatureClientImage = await pdfDoc.embedPng(
+          Buffer.from(pngImageBytes, 'base64'),
+        );
+        const xSignature = addBothSignature ? 0 : 140;
+        page.drawImage(signatureClientImage, {
+          x: xSignature,
+          y: 280,
+          width: 300,
+          height: 100,
+        });
+      }
       currentY = 265;
       page.drawLine({
         start: { x: 50, y: currentY },
@@ -1441,17 +1464,19 @@ export class PdfService {
           color: rgb(0, 0, 0),
         });
         const pngImageBytesChofer = addStartImagesVehicule
-          ? travel.signatureStartChofer.split(',')[1]
-          : travel.signatureEndChofer.split(',')[1];
-        const signatureClientImageChofer = await pdfDoc.embedPng(
-          Buffer.from(pngImageBytesChofer, 'base64'),
-        );
-        page.drawImage(signatureClientImageChofer, {
-          x: 290,
-          y: 280,
-          width: 280,
-          height: 100,
-        });
+          ? travel?.signatureStartChofer?.split(',')[1]
+          : travel?.signatureEndChofer?.split(',')[1];
+        if (pngImageBytesChofer) {
+          const signatureClientImageChofer = await pdfDoc.embedPng(
+            Buffer.from(pngImageBytesChofer, 'base64'),
+          );
+          page.drawImage(signatureClientImageChofer, {
+            x: 290,
+            y: 280,
+            width: 280,
+            height: 100,
+          });
+        }
         page.drawText('Firma del chofer', {
           x: 375,
           y: 230,
@@ -1559,7 +1584,7 @@ export class PdfService {
             ] ||
             droverDetail?.detailRegister?.name ||
             'Nombre Chofer',
-          phoneKey: null,
+          phoneKey: droverDetail?.detailRegister?.phones || 'Sin teléfono',
         };
     }
   }
@@ -1749,48 +1774,88 @@ export class PdfService {
    * Normaliza un string de tiempo a formato 12 horas.
    */
   normalizeTime(time: any): string {
-    let hours: number, minutes: number;
-
-    // Soporta objetos con la propiedad '$date'
-    if (time && typeof time === 'object' && '$date' in time) {
-      time = time['$date'];
+    // 1. Manejo de nulos/undefined de forma rápida (puedes retornar '' o lanzar un error)
+    if (time == null) {
+      // return ''; // O si prefieres lanzar un error:
+      throw new Error('El valor de "time" es nulo o indefinido.');
     }
 
-    // Si es una instancia de Date, la convierte a cadena ISO
-    if (time instanceof Date) {
-      time = time.toISOString();
+    // 2. Manejo de objetos con $date
+    if (typeof time === 'object') {
+      if ('$date' in time) {
+        time = time.$date;
+      } else if (time instanceof Date) {
+        // ya es instancia de Date, la convertimos a cadena ISO
+        time = time.toISOString();
+      } else {
+        // Si es un objeto sin $date y no es una instancia de Date
+        // decidimos si lanzamos error o simplemente lo ignoramos
+        throw new Error('No se reconoce la estructura del objeto para "time".');
+      }
     }
 
-    const isoRegex =
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|(\+\d{2}:\d{2}))?$/;
+    // 3. Manejo de timestamps numéricos (en milisegundos o segundos)
+    if (typeof time === 'number') {
+      // Un timestamp pequeño es probablemente segundos => convertir a ms
+      if (time < 1e12) {
+        time *= 1000;
+      }
+      time = new Date(time).toISOString();
+    }
 
-    if (isoRegex.test(time)) {
-      const date = new Date(time);
-      hours = date.getHours();
-      minutes = date.getMinutes();
+    // 4. Asegurarnos de que a estas alturas sea un string
+    if (typeof time !== 'string') {
+      throw new Error(
+        'El formato de "time" no es válido. Se esperaba un string, un número o un objeto con "$date".',
+      );
+    }
+
+    // 5. Eliminar espacios en blanco alrededor (por si llega " 14:30:00.000 ")
+    time = time.trim();
+
+    // 6. Regex para formatos de hora simples: "HH:MM", "HH:MM:SS", "HH:MM:SS.sss"
+    const timeOnlyRegex = /^\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/;
+    let hours: number;
+    let minutes: number;
+
+    if (timeOnlyRegex.test(time)) {
+      // Manejo directo de "HH:MM" o "HH:MM:SS(.sss)"
+      const [hh, mm] = time.split(':');
+      hours = parseInt(hh, 10);
+      minutes = parseInt(mm, 10);
     } else {
-      if (typeof time !== 'string') {
-        throw new Error(
-          'El formato de tiempo no es válido. Se esperaba un string en formato ISO, "HH:MM:SS.sss" o "HH:MM".',
-        );
+      // 7. Regex para formato ISO 8601 completo
+      const isoRegex =
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|(\+\d{2}:\d{2}))?$/;
+
+      if (isoRegex.test(time)) {
+        // Parseo directo con new Date()
+        const date = new Date(time);
+        if (isNaN(date.getTime())) {
+          throw new Error('El formato de tiempo con ISO no pudo ser parseado.');
+        }
+        hours = date.getHours();
+        minutes = date.getMinutes();
+      } else {
+        // 8. Fallback: Intentar parsear con new Date() (por si es algo como "Mar 07 2025 14:30:00", etc.)
+        const parsedDate = new Date(time);
+        if (!isNaN(parsedDate.getTime())) {
+          hours = parsedDate.getHours();
+          minutes = parsedDate.getMinutes();
+        } else {
+          // 9. Si llegamos aquí, ya no se pudo interpretar
+          throw new Error(
+            'El formato de tiempo no es válido. Se esperaba "HH:MM:SS.sss", "HH:MM", ISO 8601 o algo parseable por Date().',
+          );
+        }
       }
-      const timeParts = time.split(':');
-      if (
-        timeParts.length < 2 ||
-        isNaN(Number(timeParts[0])) ||
-        isNaN(Number(timeParts[1]))
-      ) {
-        throw new Error(
-          'El formato de tiempo no es válido. Se esperaba "HH:MM:SS.sss" o "HH:MM".',
-        );
-      }
-      hours = parseInt(timeParts[0], 10);
-      minutes = parseInt(timeParts[1], 10);
     }
 
+    // 10. Convertir a formato 12 horas
     const period = hours >= 12 ? 'PM' : 'AM';
     const normalizedHours = hours % 12 || 12;
     const normalizedMinutes = String(minutes).padStart(2, '0');
+
     return `${normalizedHours}:${normalizedMinutes} ${period}`;
   }
 
