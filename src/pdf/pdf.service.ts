@@ -1,7 +1,7 @@
 // src/pdf/pdf.service.ts
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import qr from 'qr-image';
+import * as QrImage from 'qr-image';
 import fetch from 'node-fetch';
 import { PriceService } from './../price/price.service';
 import { promises as fs } from 'fs';
@@ -82,8 +82,7 @@ export class PdfService {
         page === 'withdrawals'
           ? `${base_url}retiro?idTravel=${idTravel}`
           : `${base_url}entrega?idTravel=${idTravel}`;
-      // qr.imageSync retorna un Buffer en este caso (PNG)
-      const qrPng: Buffer = qr.imageSync(url, { type: 'png' });
+      const qrPng: Buffer = QrImage.imageSync(url, { type: 'png' });
       return qrPng;
     } catch (error) {
       console.log(error);
