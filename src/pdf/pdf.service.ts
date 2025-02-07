@@ -164,7 +164,12 @@ export class PdfService {
         const wixImageUrlSelfie = chofer?.detailRegister?.selfie;
         if (wixImageUrlSelfie && typeof wixImageUrlSelfie === 'string') {
           const imageId = wixImageUrlSelfie;
-          const directImageUrl = `https://wixmp-168aa19777669ff0d074d7f2.wixmp.com/${imageId}`;
+          let directImageUrl;
+          if (!imageId.includes('static.wixstatic.com')) {
+            directImageUrl = `https://wixmp-168aa19777669ff0d074d7f2.wixmp.com/${imageId}`;
+          } else {
+            directImageUrl = imageId;
+          }
           const imageFormat: any = wixImageUrlSelfie.includes('.png')
             ? 'png'
             : 'jpg';
@@ -217,14 +222,14 @@ export class PdfService {
       }
       if (step !== 4 && detailInfo === 'chofer') {
         page.drawText('Télefono:', {
-          x: 50,
+          x: 125,
           y: pageHeight - 90,
           size: fontSize,
           font: helveticaBoldFont,
           color: rgb(0, 0, 0),
         });
         page.drawText(detailText.phoneKey, {
-          x: 110,
+          x: 180,
           y: pageHeight - 90,
           size: fontSize,
           font: helveticaBoldFont,
