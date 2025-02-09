@@ -119,8 +119,20 @@ export class PdfService {
             ? 3400
             : 3200
           : 2000;
-      let pageHeight = addQr ? baseWithImage : baseWithImage - qrSectionHeight;
+      let extraHeight = 0;
+      const mustAddCertificate =
+        step === 4 &&
+        addDniClient &&
+        travel.deliveryCertificate &&
+        typeof travel.deliveryCertificate === 'string' &&
+        travel.deliveryCertificate.trim() !== '';
 
+      if (mustAddCertificate) {
+        extraHeight = 350; // Aumentaremos 300px
+      }
+
+      let pageHeight = addQr ? baseWithImage : baseWithImage - qrSectionHeight;
+      pageHeight += extraHeight;
       // Crear el documento PDF y agregar la página
       const pdfDoc = await PDFDocument.create();
       const page = pdfDoc.addPage([600, pageHeight]);
@@ -306,7 +318,7 @@ export class PdfService {
         color: rgb(0, 0, 0),
       });
       page.drawText(travelDate, {
-        x: 160,
+        x: step === 4 || step === 3 ? 155 : step === 1 ? 162 : 160,
         y: pageHeight - 110 + fixVertical,
         size: fontSize,
         font: font,
@@ -325,8 +337,11 @@ export class PdfService {
         font: helveticaBoldFont,
         color: rgb(0, 0, 0),
       });
+      const timeReceptionX =
+        step === 4 ? 161 : step === 3 ? 128 : step === 1 ? 155 : 160;
+      console.log('timeReceptionX', timeReceptionX);
       page.drawText(normalizedTravelTime, {
-        x: 158,
+        x: timeReceptionX,
         y: pageHeight - 127 + fixVertical,
         size: fontSize,
         font: font,
@@ -602,7 +617,7 @@ export class PdfService {
               font: helveticaBoldFont,
               color: rgb(0, 0, 0),
             });
-            if (detailInfo === 'chofer') {
+            if (detailInfo === 'chofer' || detailInfo === 'selfChofer') {
               page.drawText('El vehículo a llegado a destino. El', {
                 x: 401,
                 y: pageHeight - 108,
@@ -1427,7 +1442,70 @@ export class PdfService {
         }
         currentY -= 20;
       }
-      currentY = currentY - 300;
+      // Sólo dibujamos si (step === 4), hay DNI y existe travel.deliveryCertificate
+      // Sólo dibujamos si (step === 4), hay DNI y existe travel.deliveryCertificate
+      if (step === 4 && addDniClient && travel.deliveryCertificate) {
+        const certificateUrl = travel.deliveryCertificate;
+        if (certificateUrl && typeof certificateUrl === 'string') {
+          // 1) Detectar si es una imagen de Wix
+          const wixImagePattern = /^wix:image:\/\/v1\/(.+?)\//;
+          const match = certificateUrl.match(wixImagePattern);
+
+          let directImageUrl: string;
+          if (match && match[1]) {
+            // 2) Es una imagen de Wix => armamos URL estática
+            const imageId = match[1];
+            directImageUrl = `https://static.wixstatic.com/media/${imageId}`;
+          } else {
+            // 3) Es una URL normal => la usamos tal cual
+            directImageUrl = certificateUrl;
+          }
+
+          // 4) Determinar formato (tal cual en los demás)
+          const imageFormat: any = directImageUrl.includes('.png')
+            ? 'png'
+            : 'jpg';
+
+          try {
+            const response = await fetch(directImageUrl);
+            const arrayBuffer = await response.arrayBuffer();
+            const imageBuffer = Buffer.from(arrayBuffer);
+
+            let embeddedCertificate;
+            // 5) Igual que en tus otros if:
+            if (imageFormat === 'jpg' || imageFormat === 'jpeg') {
+              embeddedCertificate = await pdfDoc.embedJpg(imageBuffer);
+            } else if (imageFormat === 'png') {
+              embeddedCertificate = await pdfDoc.embedPng(imageBuffer);
+            } else {
+              console.warn(
+                `Formato de imagen no soportado para deliveryCertificate`,
+              );
+            }
+
+            if (embeddedCertificate) {
+              // 6) Dibujamos la imagen (500x300) debajo del bloque DNI
+              page.drawImage(embeddedCertificate, {
+                x: 50,
+                y: currentY - 300,
+                width: 500,
+                height: 300,
+              });
+
+              // Ajustamos currentY para que todo se corra
+              currentY -= 320; // 300 de la imagen + 20 de margen
+            }
+          } catch (error) {
+            console.error('Error al incrustar deliveryCertificate:', error);
+          }
+        } else {
+          console.warn(
+            'No se encontró una URL de imagen válida para deliveryCertificate',
+          );
+        }
+      }
+
+      currentY = currentY - (step === 4 ? 330 : 300);
       page.drawLine({
         start: { x: 50, y: currentY },
         end: { x: 550, y: currentY },
@@ -1438,7 +1516,6 @@ export class PdfService {
       const pngImageBytes = addDniClient
         ? travel?.signatureEndClient?.split(',')[1]
         : travel?.signatureStartClient?.split(',')[1];
-      console.log('pngImageBytes', pngImageBytes);
       if (pngImageBytes) {
         const signatureClientImage = await pdfDoc.embedPng(
           Buffer.from(pngImageBytes, 'base64'),
@@ -1660,8 +1737,11 @@ export class PdfService {
   ): Promise<{ filePath: string }> {
     try {
       const bucketName = 'drove-pdf';
+      const timestamp = await this.formatDateForFilename(new Date());
       // Si se proporciona travelId, se usará como carpeta (prefijo)
-      const key = travelId ? `${travelId}/${fileName}.pdf` : `${fileName}.pdf`;
+      const key = travelId
+        ? `${travelId}/${fileName}/${timestamp}.pdf`
+        : `${fileName}.pdf`;
 
       // Convertimos la cadena base64 a un Buffer
       const buffer = Buffer.from(base64, 'base64');
@@ -1683,6 +1763,17 @@ export class PdfService {
       console.error('Error al guardar el PDF en S3:', error);
       throw new InternalServerErrorException('Error al guardar el PDF');
     }
+  }
+
+  async formatDateForFilename(date: Date): Promise<any> {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    return `${day}/${month}/${year}_${hours}:${minutes}:${seconds}`;
   }
 
   /**
