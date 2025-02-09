@@ -1,6 +1,6 @@
 // src/pdf/dto/generate-pdf.dto.ts
 export class GeneratePdfDto {
-  travel: any; // Aquí puedes definir una interfaz o usar "any" para simplificar
+  travelId: any; // Aquí puedes definir una interfaz o usar "any" para simplificar
   usePage: string;
   addQr: boolean;
   addStartImagesVehicule: boolean;

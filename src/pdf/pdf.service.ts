@@ -32,7 +32,7 @@ export class PdfService {
   }
 
   async generatePDF(
-    travel: any,
+    travelId: any,
     usePage: string,
     addQr: boolean,
     addStartImagesVehicule: boolean,
@@ -44,6 +44,11 @@ export class PdfService {
   ): Promise<any> {
     try {
       let url_pdf;
+      console.log('travelId', travelId);
+      const travel = await this.getTravel(travelId);
+      if (!travel) {
+        throw new InternalServerErrorException('No se encontró el viaje');
+      }
       switch (usePage) {
         case 'withdrawals':
         case 'delivery':
@@ -1759,6 +1764,61 @@ export class PdfService {
     } catch (error) {
       console.error('Error en getUser:', error);
       return null;
+    }
+  }
+
+  async getTravel(travelId: string): Promise<any> {
+    try {
+      // Endpoint de la API Wix Data
+      const token =
+        'IST.eyJraWQiOiJQb3pIX2FDMiIsImFsZyI6IlJTMjU2In0.eyJkYXRhIjoie1wiaWRcIjpcIjU5ZTk0Njc2LWYyNDctNDI5ZS04ZDI0LTBkOGM2Y2I4NzAxN1wiLFwiaWRlbnRpdHlcIjp7XCJ0eXBlXCI6XCJhcHBsaWNhdGlvblwiLFwiaWRcIjpcImEzNTY4YWY4LTA2MmYtNDUwNi1hMDRjLTc0YTE1MzY3YjAwN1wifSxcInRlbmFudFwiOntcInR5cGVcIjpcImFjY291bnRcIixcImlkXCI6XCI2OWFjZDRiMy1lMDU4LTQ3MmYtYWYwOS1jNjVjYzMyNmM5NTBcIn19IiwiaWF0IjoxNzMyMzI4MTAwfQ.SZW5nsliVhBaxA1RoPRNackft7yRLURhK-9pyZa_65htCjwhBgZ2K19SDPkJ_LR_nKxeY0IRzd83CLeiTayCJRzdtfCCzwfZBLprK5vZyMbyJNZO2RodDOnLxcJOnc0PqIpszO2udGGbgwZ8GgfMZb-QveN4TPmqUllHmCSOgtL6yZUwZQJ82G5NRtM1rVhxi3lV7MaO-DhbztVDGHlapFx6iYJxjV-n2psoOifrRCunAdQL33nbc5ppT7C0iRarqjMy2Mp8SQiDQVsg9APpi2fnTH5jb8RDr4QV1Ij97dwx3cScq66Tlr8C87jCzweBnfDvohO0cnlOQikO7T4wHw';
+      const siteId = '1670865d-a9d7-411f-b9fa-b41007478883';
+      const travelsUrl = 'https://www.wixapis.com/wix-data/v2/items/query';
+
+      // Construimos el body según la estructura requerida por la API
+      const body = JSON.stringify({
+        dataCollectionId: 'Travels', // Nombre exacto de la colección
+        query: {
+          filter: {
+            _id: travelId, // Filtramos por el campo "_id"
+          },
+        },
+      });
+
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: token,
+        'wix-site-id': siteId,
+      };
+
+      // Petición POST
+      const response = await fetch(travelsUrl, {
+        method: 'POST',
+        headers,
+        body,
+      });
+
+      // Comprobamos si la respuesta es correcta
+      if (!response.ok) {
+        throw new Error(
+          `Error HTTP ${response.status} - ${response.statusText}`,
+        );
+      }
+
+      // Convertimos la respuesta a JSON
+      const data = await response.json();
+
+      // `data` normalmente tiene la forma { items: [...], totalCount: number, ... }
+      // Si quieres retornar el primer elemento encontrado:
+      if (data.dataItems && data.dataItems.length > 0) {
+        return data.dataItems[0].data; // Devuelve el viaje
+      } else {
+        // O devuelve null/undefined si no encuentras un ítem
+        return null;
+      }
+    } catch (error) {
+      console.error('Error en getTravel:', error);
+      throw error; // O maneja el error de otra forma
     }
   }
 

@@ -16,7 +16,7 @@ export class PdfController {
     try {
       // Llama al servicio pasando todos los datos recibidos en el DTO
       const pdfUrl = await this.pdfService.generatePDF(
-        generatePdfDto.travel,
+        generatePdfDto.travelId,
         generatePdfDto.usePage,
         generatePdfDto.addQr,
         generatePdfDto.addStartImagesVehicule,
