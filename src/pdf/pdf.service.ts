@@ -82,6 +82,7 @@ export class PdfService {
    */
   async generateQR(idTravel: string, page: string): Promise<Buffer> {
     try {
+      console.log('generando qr', page);
       const base_url = 'https://drove.es/';
       const url =
         page === 'withdrawals'
@@ -164,7 +165,10 @@ export class PdfService {
       );
       console.log('datos del chofer', chofer);
       // Si se trata de la sección chofer y no es step 4, incluir la selfie
-      if (step !== 4 && detailInfo === 'chofer') {
+      if (
+        (step !== 4 && detailInfo === 'chofer') ||
+        (step !== 4 && detailInfo === 'selfChofer')
+      ) {
         const wixImageUrlSelfie = chofer?.detailRegister?.selfie;
         if (wixImageUrlSelfie && typeof wixImageUrlSelfie === 'string') {
           const imageId = wixImageUrlSelfie;
@@ -734,7 +738,7 @@ export class PdfService {
           }
           break;
       }
-
+      console.log('Agregar codigo QR ?', addQr);
       if (addQr) {
         const imgQrWithdrawals = await this.generateQR(travel._id, usePage);
         const emblemImage = await pdfDoc.embedPng(imgQrWithdrawals);
