@@ -209,7 +209,7 @@ export class PdfService {
       }
       if (step !== 4) {
         page.drawText(detailText.title, {
-          x: detailInfo === 'chofer' ? 125 : 50,
+          x: detailInfo === 'chofer' || detailInfo === 'selfChofer' ? 125 : 50,
           y: pageHeight - 70,
           size: fontSize,
           font: helveticaBoldFont,
@@ -228,7 +228,10 @@ export class PdfService {
           color: rgb(0, 0, 0),
         });
       }
-      if (step !== 4 && detailInfo === 'chofer') {
+      if (
+        (step !== 4 && detailInfo === 'chofer') ||
+        (step !== 4 && detailInfo === 'selfChofer')
+      ) {
         page.drawText('Télefono:', {
           x: 125,
           y: pageHeight - 90,
