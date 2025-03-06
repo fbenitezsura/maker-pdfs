@@ -128,7 +128,7 @@ export class PdfService {
         travel.deliveryCertificate.trim() !== '';
 
       if (mustAddCertificate) {
-        extraHeight = 350; // Aumentaremos 300px
+        extraHeight = 900; // Aumentaremos 300px
       }
 
       let pageHeight = addQr ? baseWithImage : baseWithImage - qrSectionHeight;
@@ -255,7 +255,7 @@ export class PdfService {
           x: 180,
           y: pageHeight - 90,
           size: fontSize,
-          font: helveticaBoldFont,
+          font: font,
           color: rgb(0, 0, 0),
         });
       }
@@ -263,22 +263,59 @@ export class PdfService {
         step !== 4 &&
         (detailInfo === 'delivery' || detailInfo === 'reception')
       ) {
-        page.drawText('Télefono:', {
+        const titleDNI =
+          detailInfo === 'delivery'
+            ? 'NIF o CIF de quien entrega el vehiculo:'
+            : 'NIF o CIF receptor:';
+        page.drawText(titleDNI, {
           x: 50,
           y: pageHeight - 90,
           size: fontSize,
           font: helveticaBoldFont,
           color: rgb(0, 0, 0),
         });
+        const dniValue =
+          detailInfo === 'delivery'
+            ? travel?.personDelivery?.dni
+            : travel?.personReceive?.dni;
+        const positionXDni = detailInfo === 'delivery' ? 273 : 160;
+        page.drawText(dniValue, {
+          x: positionXDni,
+          y: pageHeight - 90,
+          size: fontSize,
+          font: helveticaBoldFont,
+          color: rgb(0, 0, 0),
+        });
+        page.drawText('Télefono:', {
+          x: 49,
+          y: pageHeight - 107,
+          size: fontSize,
+          font: helveticaBoldFont,
+          color: rgb(0, 0, 0),
+        });
         page.drawText(detailText.phoneKey, {
           x: 110,
-          y: pageHeight - 90,
+          y: pageHeight - 107,
           size: fontSize,
           font: helveticaBoldFont,
           color: rgb(0, 0, 0),
         });
       }
       if (step === 4 && detailInfo === 'chofer') {
+        page.drawText('Nombre del chofer:', {
+          x: 50,
+          y: pageHeight - 73, // 20 pixeles por encima
+          size: fontSize,
+          font: helveticaBoldFont,
+          color: rgb(0, 0, 0),
+        });
+        page.drawText(detailText.nameKey, {
+          x: 160,
+          y: pageHeight - 73,
+          size: fontSize,
+          font: helveticaBoldFont,
+          color: rgb(0, 0, 0),
+        });
         page.drawText('Nombre del receptor:', {
           x: 50,
           y: pageHeight - 90,
@@ -293,8 +330,56 @@ export class PdfService {
           font: helveticaBoldFont,
           color: rgb(0, 0, 0),
         });
+        const titleDNI = 'NIF o CIF receptor:';
+        page.drawText(titleDNI, {
+          x: 50,
+          y: pageHeight - 107,
+          size: fontSize,
+          font: helveticaBoldFont,
+          color: rgb(0, 0, 0),
+        });
+        const dniValue = travel?.personReceive?.dni;
+        page.drawText(dniValue, {
+          x: 160,
+          y: pageHeight - 107,
+          size: fontSize,
+          font: helveticaBoldFont,
+          color: rgb(0, 0, 0),
+        });
       }
-      const fixVertical = step === 4 && detailInfo !== 'chofer' ? 20 : 0;
+      if (step === 4 && detailInfo === 'reception') {
+        page.drawText('Nombre del receptor:', {
+          x: 50,
+          y: pageHeight - 90,
+          size: fontSize,
+          font: helveticaBoldFont,
+          color: rgb(0, 0, 0),
+        });
+        page.drawText(travel.personReceive.fullName, {
+          x: 175,
+          y: pageHeight - 90,
+          size: fontSize,
+          font: helveticaBoldFont,
+          color: rgb(0, 0, 0),
+        });
+        const titleDNI = 'NIF o CIF receptor:';
+        page.drawText(titleDNI, {
+          x: 50,
+          y: pageHeight - 107,
+          size: fontSize,
+          font: helveticaBoldFont,
+          color: rgb(0, 0, 0),
+        });
+        const dniValue = travel?.personReceive?.dni;
+        page.drawText(dniValue, {
+          x: 160,
+          y: pageHeight - 107,
+          size: fontSize,
+          font: helveticaBoldFont,
+          color: rgb(0, 0, 0),
+        });
+      }
+      const fixVertical = step === 4 && detailInfo !== 'chofer' ? -10 : -10;
       let dateUse =
         step === 3
           ? travel.travelDateEnd
@@ -312,14 +397,14 @@ export class PdfService {
         step === 3 || step === 4 ? 'Fecha de entrega:' : 'Fecha de recogida:';
       page.drawText(textLabel, {
         x: 50,
-        y: pageHeight - 110 + fixVertical,
+        y: pageHeight - 123,
         size: fontSize,
         font: helveticaBoldFont,
         color: rgb(0, 0, 0),
       });
       page.drawText(travelDate, {
         x: step === 4 || step === 3 ? 155 : step === 1 ? 162 : 160,
-        y: pageHeight - 110 + fixVertical,
+        y: pageHeight - 123,
         size: fontSize,
         font: font,
         color: rgb(0, 0, 0),
@@ -1336,71 +1421,177 @@ export class PdfService {
           height: 300,
         });
       }
-      if (addDniClient) {
-        const datosImagenesDNICliente = [
-          ['Anverso DNI cliente', travel.frontDniReceiver],
-          ['Reverso DNI cliente', travel.backDniReceiver],
-        ];
-        const imagesPerRowDNI = 2;
-        const cellWidthDNI = 250;
-        const cellHeightDNI = 200;
-        const imageWidthDNI = cellWidthDNI - 20;
-        const imageHeightDNI = 150;
-        const paddingXDNI = 50;
-        const titleHeightDNI = 20;
-        const titlePaddingDNI = 5;
-        let xPositionDNI = paddingXDNI;
-        currentY -= 500;
-        for (let i = 0; i < datosImagenesDNICliente.length; i++) {
-          const [description, wixImageUrl] = datosImagenesDNICliente[i];
+
+      if (step === 4) {
+        // BLOQUE EXCLUSIVO PARA STEP 4
+
+        // 1. Dibujar Documentos del Usuario (DNI)
+        if (addDniClient) {
+          const datosImagenesDNICliente = [
+            ['Anverso DNI cliente', travel.frontDniReceiver],
+            ['Reverso DNI cliente', travel.backDniReceiver],
+          ];
+          const imagesPerRowDNI = 2;
+          const cellWidthDNI = 250;
+          const cellHeightDNI = 200;
+          const imageWidthDNI = cellWidthDNI - 20;
+          const imageHeightDNI = 150;
+          const paddingXDNI = 50;
+          const titleHeightDNI = 20;
+          const titleHeight = 20;
+          const titlePaddingDNI = 5;
+          const titlePadding = 5;
+          let xPositionDNI = paddingXDNI;
+          // Ajustamos currentY para que los documentos queden en la parte superior del bloque final.
+          // (Ajusta este valor según tus necesidades)
+          currentY -= 500;
+          for (let i = 0; i < datosImagenesDNICliente.length; i++) {
+            const [description, wixImageUrl] = datosImagenesDNICliente[i];
+            page.drawRectangle({
+              x: xPositionDNI,
+              y: currentY,
+              width: cellWidthDNI,
+              height: cellHeightDNI,
+              borderWidth: 1,
+              borderColor: rgb(0, 0, 0),
+              color: rgb(1, 1, 1),
+            });
+            const titleBoxHeightDNI = titleHeightDNI + titlePaddingDNI * 2;
+            const titleYPositionDNI =
+              currentY + cellHeightDNI - titleBoxHeightDNI;
+            page.drawLine({
+              start: {
+                x: xPositionDNI,
+                y: titleYPositionDNI + titleBoxHeightDNI,
+              },
+              end: {
+                x: xPositionDNI + cellWidthDNI,
+                y: titleYPositionDNI + titleBoxHeightDNI,
+              },
+              thickness: 1,
+              color: rgb(0, 0, 0),
+            });
+            const textWidthDNI = helveticaBoldFont.widthOfTextAtSize(
+              description,
+              fontSize,
+            );
+            page.drawText(description, {
+              x: xPositionDNI + cellWidthDNI / 2 - textWidthDNI / 2,
+              y: titleYPositionDNI + titlePaddingDNI + 5,
+              size: fontSize,
+              font: helveticaBoldFont,
+              color: rgb(0, 0, 0),
+            });
+            page.drawLine({
+              start: { x: xPositionDNI, y: titleYPositionDNI },
+              end: { x: xPositionDNI + cellWidthDNI, y: titleYPositionDNI },
+              thickness: 1,
+              color: rgb(0, 0, 0),
+            });
+            if (wixImageUrl) {
+              const wixImagePattern = /^wix:image:\/\/v1\/(.+?)\//;
+              const match = wixImageUrl.match(wixImagePattern);
+              if (match && match[1]) {
+                const imageId = match[1];
+                const directImageUrl = `https://static.wixstatic.com/media/${imageId}`;
+                const imageFormat: any = wixImageUrl.includes('.png')
+                  ? 'png'
+                  : 'jpg';
+                const response = await fetch(directImageUrl);
+                const arrayBuffer = await response.arrayBuffer();
+                const imageBuffer = Buffer.from(arrayBuffer);
+                let embeddedImage;
+                if (imageFormat === 'jpg' || imageFormat === 'jpeg') {
+                  embeddedImage = await pdfDoc.embedJpg(imageBuffer);
+                } else if (imageFormat === 'png') {
+                  embeddedImage = await pdfDoc.embedPng(imageBuffer);
+                } else {
+                  console.warn(
+                    `Formato de imagen no soportado para ${description}`,
+                  );
+                  continue;
+                }
+                page.drawImage(embeddedImage, {
+                  x: xPositionDNI + 10,
+                  y: currentY + 10,
+                  width: imageWidthDNI,
+                  height: imageHeightDNI,
+                });
+              } else {
+                console.warn(
+                  `No se pudo extraer el ID de la imagen para ${description}`,
+                );
+              }
+            } else {
+              console.warn(`No hay imagen disponible para ${description}`);
+            }
+            xPositionDNI += cellWidthDNI;
+            if (
+              (i + 1) % imagesPerRowDNI === 0 &&
+              i !== datosImagenesDNICliente.length - 1
+            ) {
+              xPositionDNI = paddingXDNI;
+              currentY -= cellHeightDNI;
+            }
+          }
+          currentY -= 240; // Espacio después de los documentos
+          const selfieData = [
+            'Foto receptor del vehiculo',
+            travel.imgSelfieDniReceiver,
+          ];
+          // En esta fila se usará una sola celda que abarque el ancho completo (500px)
+          const cellWidthSelfie = 500;
+          const cellHeightSelfie = 200; // Puedes ajustar este valor según lo deseado
+          const xPosSelfie = 50; // Centrado si la página es de 600px con márgenes de 50 a cada lado
+
           page.drawRectangle({
-            x: xPositionDNI,
+            x: xPosSelfie,
             y: currentY,
-            width: cellWidthDNI,
-            height: cellHeightDNI,
+            width: cellWidthSelfie,
+            height: cellHeightSelfie,
             borderWidth: 1,
             borderColor: rgb(0, 0, 0),
             color: rgb(1, 1, 1),
           });
-          const titleBoxHeightDNI = titleHeightDNI + titlePaddingDNI * 2;
-          const titleYPositionDNI =
-            currentY + cellHeightDNI - titleBoxHeightDNI;
+          const titleBoxHeightSelfie = titleHeight + titlePadding * 2;
+          const titleYPosSelfie =
+            currentY + cellHeightSelfie - titleBoxHeightSelfie;
           page.drawLine({
-            start: {
-              x: xPositionDNI,
-              y: titleYPositionDNI + titleBoxHeightDNI,
-            },
+            start: { x: xPosSelfie, y: titleYPosSelfie + titleBoxHeightSelfie },
             end: {
-              x: xPositionDNI + cellWidthDNI,
-              y: titleYPositionDNI + titleBoxHeightDNI,
+              x: xPosSelfie + cellWidthSelfie,
+              y: titleYPosSelfie + titleBoxHeightSelfie,
             },
             thickness: 1,
             color: rgb(0, 0, 0),
           });
-          const textWidthDNI = helveticaBoldFont.widthOfTextAtSize(
-            description,
+          const textWidthSelfie = helveticaBoldFont.widthOfTextAtSize(
+            selfieData[0],
             fontSize,
           );
-          page.drawText(description, {
-            x: xPositionDNI + cellWidthDNI / 2 - textWidthDNI / 2,
-            y: titleYPositionDNI + titlePaddingDNI + 5,
+          page.drawText(selfieData[0], {
+            x: xPosSelfie + cellWidthSelfie / 2 - textWidthSelfie / 2,
+            y: titleYPosSelfie + titlePadding + 5,
             size: fontSize,
             font: helveticaBoldFont,
             color: rgb(0, 0, 0),
           });
           page.drawLine({
-            start: { x: xPositionDNI, y: titleYPositionDNI },
-            end: { x: xPositionDNI + cellWidthDNI, y: titleYPositionDNI },
+            start: { x: xPosSelfie, y: titleYPosSelfie },
+            end: { x: xPosSelfie + cellWidthSelfie, y: titleYPosSelfie },
             thickness: 1,
             color: rgb(0, 0, 0),
           });
-          if (wixImageUrl) {
+          // Cargar y dibujar la imagen de la selfie
+          const wixImageUrlSelfie = selfieData[1];
+          console.log('url selfie', wixImageUrlSelfie);
+          if (wixImageUrlSelfie) {
             const wixImagePattern = /^wix:image:\/\/v1\/(.+?)\//;
-            const match = wixImageUrl.match(wixImagePattern);
+            const match = wixImageUrlSelfie.match(wixImagePattern);
             if (match && match[1]) {
               const imageId = match[1];
               const directImageUrl = `https://static.wixstatic.com/media/${imageId}`;
-              const imageFormat: any = wixImageUrl.includes('.png')
+              const imageFormat: any = wixImageUrlSelfie.includes('.png')
                 ? 'png'
                 : 'jpg';
               const response = await fetch(directImageUrl);
@@ -1413,223 +1604,452 @@ export class PdfService {
                 embeddedImage = await pdfDoc.embedPng(imageBuffer);
               } else {
                 console.warn(
-                  `Formato de imagen no soportado para ${description}`,
+                  `Formato de imagen no soportado para ${selfieData[0]}`,
                 );
-                continue;
               }
-              page.drawImage(embeddedImage, {
-                x: xPositionDNI + 10,
-                y: currentY + 10,
-                width: imageWidthDNI,
-                height: imageHeightDNI,
-              });
+              if (embeddedImage) {
+                page.drawImage(embeddedImage, {
+                  x: xPosSelfie + 10,
+                  y: currentY + 10,
+                  width: cellWidthSelfie - 20,
+                  height: cellHeightSelfie - 20,
+                });
+              }
             } else {
               console.warn(
-                `No se pudo extraer el ID de la imagen para ${description}`,
+                `No se pudo extraer el ID de la imagen para ${selfieData[0]}`,
               );
             }
           } else {
-            console.warn(`No hay imagen disponible para ${description}`);
+            console.warn(`No hay imagen disponible para ${selfieData[0]}`);
           }
-          xPositionDNI += cellWidthDNI;
-          if (
-            (i + 1) % imagesPerRowDNI === 0 &&
-            i !== datosImagenesDNICliente.length - 1
-          ) {
-            xPositionDNI = paddingXDNI;
-            currentY -= cellHeightDNI;
-          }
-        }
+          currentY -= cellHeightSelfie + 20;
+        } // Fin de bloque DNI
+
+        // 2. Dibujar Bloque de Firmas
         currentY -= 20;
-      }
-      // Sólo dibujamos si (step === 4), hay DNI y existe travel.deliveryCertificate
-      // Sólo dibujamos si (step === 4), hay DNI y existe travel.deliveryCertificate
-      if (step === 4 && addDniClient && travel.deliveryCertificate) {
-        const certificateUrl = travel.deliveryCertificate;
-        if (certificateUrl && typeof certificateUrl === 'string') {
-          // 1) Detectar si es una imagen de Wix
-          const wixImagePattern = /^wix:image:\/\/v1\/(.+?)\//;
-          const match = certificateUrl.match(wixImagePattern);
-
-          let directImageUrl: string;
-          if (match && match[1]) {
-            // 2) Es una imagen de Wix => armamos URL estática
-            const imageId = match[1];
-            directImageUrl = `https://static.wixstatic.com/media/${imageId}`;
-          } else {
-            // 3) Es una URL normal => la usamos tal cual
-            directImageUrl = certificateUrl;
-          }
-
-          // 4) Determinar formato (tal cual en los demás)
-          const imageFormat: any = directImageUrl.includes('.png')
-            ? 'png'
-            : 'jpg';
-
-          try {
-            const response = await fetch(directImageUrl);
-            const arrayBuffer = await response.arrayBuffer();
-            const imageBuffer = Buffer.from(arrayBuffer);
-
-            let embeddedCertificate;
-            // 5) Igual que en tus otros if:
-            if (imageFormat === 'jpg' || imageFormat === 'jpeg') {
-              embeddedCertificate = await pdfDoc.embedJpg(imageBuffer);
-            } else if (imageFormat === 'png') {
-              embeddedCertificate = await pdfDoc.embedPng(imageBuffer);
-            } else {
-              console.warn(
-                `Formato de imagen no soportado para deliveryCertificate`,
-              );
-            }
-
-            if (embeddedCertificate) {
-              // 6) Dibujamos la imagen (500x300) debajo del bloque DNI
-              page.drawImage(embeddedCertificate, {
-                x: 50,
-                y: currentY - 300,
-                width: 500,
-                height: 300,
-              });
-
-              // Ajustamos currentY para que todo se corra
-              currentY -= 320; // 300 de la imagen + 20 de margen
-            }
-          } catch (error) {
-            console.error('Error al incrustar deliveryCertificate:', error);
-          }
-        } else {
-          console.warn(
-            'No se encontró una URL de imagen válida para deliveryCertificate',
-          );
-        }
-      }
-
-      currentY = currentY - (step === 4 ? 330 : 300);
-      page.drawLine({
-        start: { x: 50, y: currentY },
-        end: { x: 550, y: currentY },
-        thickness: 2,
-        color: rgb(0, 0, 0),
-      });
-      currentY -= 20;
-      const pngImageBytes = addDniClient
-        ? travel?.signatureEndClient?.split(',')[1]
-        : travel?.signatureStartClient?.split(',')[1];
-      if (pngImageBytes) {
-        const signatureClientImage = await pdfDoc.embedPng(
-          Buffer.from(pngImageBytes, 'base64'),
-        );
-        const xSignature = addBothSignature ? 0 : 140;
-        page.drawImage(signatureClientImage, {
-          x: xSignature,
-          y: 280,
-          width: 300,
-          height: 100,
-        });
-      }
-      currentY = 265;
-      page.drawLine({
-        start: { x: 50, y: currentY },
-        end: { x: 550, y: currentY },
-        thickness: 2,
-        color: rgb(0, 0, 0),
-      });
-      currentY -= 32;
-      page.drawText('Firma del cliente', {
-        x: addBothSignature ? 130 : 240,
-        y: currentY,
-        size: 13,
-        font: font,
-        color: rgb(0, 0, 0),
-      });
-      page.drawLine({
-        start: { x: 50, y: currentY - 30 },
-        end: { x: 550, y: currentY - 30 },
-        thickness: 2,
-        color: rgb(0, 0, 0),
-      });
-      if (addBothSignature) {
         page.drawLine({
-          start: { x: 300, y: 437 },
-          end: { x: 300, y: 203 },
-          thickness: 3,
+          start: { x: 50, y: 1100 },
+          end: { x: 550, y: 1100 },
+          thickness: 2,
           color: rgb(0, 0, 0),
         });
-        const pngImageBytesChofer = addStartImagesVehicule
-          ? travel?.signatureStartChofer?.split(',')[1]
-          : travel?.signatureEndChofer?.split(',')[1];
-        if (pngImageBytesChofer) {
-          const signatureClientImageChofer = await pdfDoc.embedPng(
-            Buffer.from(pngImageBytesChofer, 'base64'),
+        currentY -= 20;
+        // Firma del cliente
+        const pngImageBytes = addDniClient
+          ? travel?.signatureEndClient?.split(',')[1]
+          : travel?.signatureStartClient?.split(',')[1];
+        if (pngImageBytes) {
+          const signatureClientImage = await pdfDoc.embedPng(
+            Buffer.from(pngImageBytes, 'base64'),
           );
-          page.drawImage(signatureClientImageChofer, {
-            x: 290,
-            y: 280,
-            width: 280,
+          const xSignature = addBothSignature ? 10 : 140;
+          page.drawImage(signatureClientImage, {
+            x: xSignature,
+            y: currentY + 100, // Posición para la firma del cliente
+            width: 300,
             height: 100,
           });
         }
-        page.drawText('Firma del chofer', {
-          x: 375,
-          y: 230,
+
+        currentY = 1100; // Ajusta este valor si es necesario para que las firmas queden más arriba
+        page.drawLine({
+          start: { x: 50, y: 890 },
+          end: { x: 550, y: 890 },
+          thickness: 2,
+          color: rgb(0, 0, 0),
+        });
+        currentY -= 400;
+        console.log('VAlorr actual ------------------------- ', currentY);
+        page.drawText('Firma del cliente', {
+          x: addBothSignature ? 120 : 240,
+          y: currentY + 170,
           size: 13,
           font: font,
           color: rgb(0, 0, 0),
         });
-        currentY -= 50;
-        page.drawText(
-          'Ambas partes confirman el inicio del traslado del vehículo desde el punto de recogida hasta el ',
-          { x: 60, y: currentY, size: 12, font: font, color: rgb(0, 0, 0) },
-        );
-        currentY -= 15;
-        page.drawText(
-          'punto de entrega, solicitado por el cliente y aceptado por el chofer, según lo indicado en este ',
-          { x: 60, y: currentY, size: 12, font: font, color: rgb(0, 0, 0) },
-        );
-        currentY -= 15;
-        page.drawText('documento de confirmación emitido a través de DROVE®', {
+        console.log('el current de la linea de abajo', currentY + 190);
+        page.drawLine({
+          start: { x: 50, y: currentY + 150 },
+          end: { x: 550, y: currentY + 150 },
+          thickness: 2,
+          color: rgb(0, 0, 0),
+        });
+        if (addBothSignature) {
+          // Firma del chofer
+          page.drawLine({
+            start: { x: 300, y: 1100 },
+            end: { x: 300, y: 850 },
+            thickness: 3,
+            color: rgb(0, 0, 0),
+          });
+          const pngImageBytesChofer = addStartImagesVehicule
+            ? travel?.signatureStartChofer?.split(',')[1]
+            : travel?.signatureEndChofer?.split(',')[1];
+          if (pngImageBytesChofer) {
+            const signatureClientImageChofer = await pdfDoc.embedPng(
+              Buffer.from(pngImageBytesChofer, 'base64'),
+            );
+            page.drawImage(signatureClientImageChofer, {
+              x: 300,
+              y: currentY + 240, // Alineado con la firma del cliente
+              width: 280,
+              height: 100,
+            });
+          }
+          page.drawText('Firma del chofer', {
+            x: 375,
+            y: currentY + 170, // Ajuste para situar el texto correctamente
+            size: 13,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+          currentY = 820;
+          console.log('actualmenete el 50', currentY);
+          page.drawText(
+            'Ambas partes confirman el inicio del traslado del vehículo desde el punto de recogida hasta el',
+            { x: 60, y: currentY, size: 12, font: font, color: rgb(0, 0, 0) },
+          );
+          currentY -= 15;
+          page.drawText(
+            'punto de entrega, solicitado por el cliente y aceptado por el chofer, según lo indicado en este',
+            { x: 60, y: currentY, size: 12, font: font, color: rgb(0, 0, 0) },
+          );
+          currentY -= 15;
+          page.drawText(
+            'documento de confirmación emitido a través de DROVE®',
+            {
+              x: 60,
+              y: currentY,
+              size: 12,
+              font: font,
+              color: rgb(0, 0, 0),
+            },
+          );
+        } else {
+          currentY -= 60;
+          page.drawText(
+            'Confirmo que el dia de hoy solicité un traslado del vehículo nombrado en este documento,',
+            { x: 60, y: currentY, size: 12, font: font, color: rgb(0, 0, 0) },
+          );
+          currentY -= 15;
+          page.drawText('por medio de DROVE@', {
+            x: 60,
+            y: currentY,
+            size: 12,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+          currentY -= 55;
+          page.drawLine({
+            start: { x: 50, y: currentY },
+            end: { x: 550, y: currentY },
+            thickness: 8,
+            color: rgb(0, 0, 0),
+          });
+        }
+
+        // 3. Información final: Fecha de emisión del documento
+        currentY -= 30;
+        const formattedDate = new Date().toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        });
+        page.drawText(`Fecha de emisión del documento: ${formattedDate}`, {
           x: 60,
           y: currentY,
-          size: 12,
+          size: 9,
           font: font,
           color: rgb(0, 0, 0),
         });
+
+        // 4. Dibujar el Certificado (si existe)
+        if (addDniClient && travel.deliveryCertificate) {
+          const certificateUrl = travel.deliveryCertificate;
+          if (certificateUrl && typeof certificateUrl === 'string') {
+            const wixImagePattern = /^wix:image:\/\/v1\/(.+?)\//;
+            const match = certificateUrl.match(wixImagePattern);
+            let directImageUrl: string;
+            if (match && match[1]) {
+              const imageId = match[1];
+              directImageUrl = `https://static.wixstatic.com/media/${imageId}`;
+            } else {
+              directImageUrl = certificateUrl;
+            }
+            const imageFormat: any = directImageUrl.includes('.png')
+              ? 'png'
+              : 'jpg';
+            try {
+              const response = await fetch(directImageUrl);
+              const arrayBuffer = await response.arrayBuffer();
+              const imageBuffer = Buffer.from(arrayBuffer);
+              let embeddedCertificate;
+              if (imageFormat === 'jpg' || imageFormat === 'jpeg') {
+                embeddedCertificate = await pdfDoc.embedJpg(imageBuffer);
+              } else if (imageFormat === 'png') {
+                embeddedCertificate = await pdfDoc.embedPng(imageBuffer);
+              } else {
+                console.warn(
+                  `Formato de imagen no soportado para deliveryCertificate`,
+                );
+              }
+              if (embeddedCertificate) {
+                console.log('valoor para ------', currentY);
+                page.drawImage(embeddedCertificate, {
+                  x: 50,
+                  y: 50,
+                  width: 500,
+                  height: 680,
+                });
+                currentY -= 320; // Ajuste posterior a la imagen del certificado
+              }
+            } catch (error) {
+              console.error('Error al incrustar deliveryCertificate:', error);
+            }
+          } else {
+            console.warn(
+              'No se encontró una URL de imagen válida para deliveryCertificate',
+            );
+          }
+        }
       } else {
-        currentY -= 60;
-        page.drawText(
-          'Confirmo que el dia de hoy solicité un traslado del vehículo nombrado en este documento,',
-          { x: 60, y: currentY, size: 12, font: font, color: rgb(0, 0, 0) },
-        );
-        currentY -= 15;
-        page.drawText('por medio de DROVE@', {
-          x: 60,
-          y: currentY,
-          size: 12,
-          font: font,
+        if (addDniClient) {
+          const datosImagenesDNICliente = [
+            ['Anverso DNI cliente', travel.frontDniReceiver],
+            ['Reverso DNI cliente', travel.backDniReceiver],
+          ];
+          const imagesPerRowDNI = 2;
+          const cellWidthDNI = 250;
+          const cellHeightDNI = 200;
+          const imageWidthDNI = cellWidthDNI - 20;
+          const imageHeightDNI = 150;
+          const paddingXDNI = 50;
+          const titleHeightDNI = 20;
+          const titlePaddingDNI = 5;
+          let xPositionDNI = paddingXDNI;
+          currentY -= 500;
+          for (let i = 0; i < datosImagenesDNICliente.length; i++) {
+            const [description, wixImageUrl] = datosImagenesDNICliente[i];
+            page.drawRectangle({
+              x: xPositionDNI,
+              y: currentY,
+              width: cellWidthDNI,
+              height: cellHeightDNI,
+              borderWidth: 1,
+              borderColor: rgb(0, 0, 0),
+              color: rgb(1, 1, 1),
+            });
+            const titleBoxHeightDNI = titleHeightDNI + titlePaddingDNI * 2;
+            const titleYPositionDNI =
+              currentY + cellHeightDNI - titleBoxHeightDNI;
+            page.drawLine({
+              start: {
+                x: xPositionDNI,
+                y: titleYPositionDNI + titleBoxHeightDNI,
+              },
+              end: {
+                x: xPositionDNI + cellWidthDNI,
+                y: titleYPositionDNI + titleBoxHeightDNI,
+              },
+              thickness: 1,
+              color: rgb(0, 0, 0),
+            });
+            const textWidthDNI = helveticaBoldFont.widthOfTextAtSize(
+              description,
+              fontSize,
+            );
+            page.drawText(description, {
+              x: xPositionDNI + cellWidthDNI / 2 - textWidthDNI / 2,
+              y: titleYPositionDNI + titlePaddingDNI + 5,
+              size: fontSize,
+              font: helveticaBoldFont,
+              color: rgb(0, 0, 0),
+            });
+            page.drawLine({
+              start: { x: xPositionDNI, y: titleYPositionDNI },
+              end: { x: xPositionDNI + cellWidthDNI, y: titleYPositionDNI },
+              thickness: 1,
+              color: rgb(0, 0, 0),
+            });
+            if (wixImageUrl) {
+              const wixImagePattern = /^wix:image:\/\/v1\/(.+?)\//;
+              const match = wixImageUrl.match(wixImagePattern);
+              if (match && match[1]) {
+                const imageId = match[1];
+                const directImageUrl = `https://static.wixstatic.com/media/${imageId}`;
+                const imageFormat: any = wixImageUrl.includes('.png')
+                  ? 'png'
+                  : 'jpg';
+                const response = await fetch(directImageUrl);
+                const arrayBuffer = await response.arrayBuffer();
+                const imageBuffer = Buffer.from(arrayBuffer);
+                let embeddedImage;
+                if (imageFormat === 'jpg' || imageFormat === 'jpeg') {
+                  embeddedImage = await pdfDoc.embedJpg(imageBuffer);
+                } else if (imageFormat === 'png') {
+                  embeddedImage = await pdfDoc.embedPng(imageBuffer);
+                } else {
+                  console.warn(
+                    `Formato de imagen no soportado para ${description}`,
+                  );
+                  continue;
+                }
+                page.drawImage(embeddedImage, {
+                  x: xPositionDNI + 10,
+                  y: currentY + 10,
+                  width: imageWidthDNI,
+                  height: imageHeightDNI,
+                });
+              } else {
+                console.warn(
+                  `No se pudo extraer el ID de la imagen para ${description}`,
+                );
+              }
+            } else {
+              console.warn(`No hay imagen disponible para ${description}`);
+            }
+            xPositionDNI += cellWidthDNI;
+            if (
+              (i + 1) % imagesPerRowDNI === 0 &&
+              i !== datosImagenesDNICliente.length - 1
+            ) {
+              xPositionDNI = paddingXDNI;
+              currentY -= cellHeightDNI;
+            }
+          }
+          currentY -= 20;
+        }
+        currentY = currentY - (step === 4 ? 0 : 300);
+        page.drawLine({
+          start: { x: 50, y: 437 },
+          end: { x: 550, y: 437 },
+          thickness: 2,
           color: rgb(0, 0, 0),
         });
-        currentY -= 55;
+        currentY -= 20;
+        const pngImageBytes = addDniClient
+          ? travel?.signatureEndClient?.split(',')[1]
+          : travel?.signatureStartClient?.split(',')[1];
+        if (pngImageBytes) {
+          const signatureClientImage = await pdfDoc.embedPng(
+            Buffer.from(pngImageBytes, 'base64'),
+          );
+          const xSignature = addBothSignature ? 0 : 140;
+          page.drawImage(signatureClientImage, {
+            x: xSignature,
+            y: 280,
+            width: 300,
+            height: 100,
+          });
+        }
+        currentY = 265;
         page.drawLine({
           start: { x: 50, y: currentY },
           end: { x: 550, y: currentY },
-          thickness: 8,
+          thickness: 2,
+          color: rgb(0, 0, 0),
+        });
+        currentY -= 32;
+        page.drawText('Firma del cliente', {
+          x: addBothSignature ? 130 : 240,
+          y: currentY,
+          size: 13,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
+        page.drawLine({
+          start: { x: 50, y: currentY - 30 },
+          end: { x: 550, y: currentY - 30 },
+          thickness: 2,
+          color: rgb(0, 0, 0),
+        });
+        if (addBothSignature) {
+          page.drawLine({
+            start: { x: 300, y: 437 },
+            end: { x: 300, y: 203 },
+            thickness: 3,
+            color: rgb(0, 0, 0),
+          });
+          const pngImageBytesChofer = addStartImagesVehicule
+            ? travel?.signatureStartChofer?.split(',')[1]
+            : travel?.signatureEndChofer?.split(',')[1];
+          if (pngImageBytesChofer) {
+            const signatureClientImageChofer = await pdfDoc.embedPng(
+              Buffer.from(pngImageBytesChofer, 'base64'),
+            );
+            page.drawImage(signatureClientImageChofer, {
+              x: 290,
+              y: 280,
+              width: 280,
+              height: 100,
+            });
+          }
+          page.drawText('Firma del chofer', {
+            x: 375,
+            y: 230,
+            size: 13,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+          currentY -= 50;
+          page.drawText(
+            'Ambas partes confirman el inicio del traslado del vehículo desde el punto de recogida hasta el ',
+            { x: 60, y: currentY, size: 12, font: font, color: rgb(0, 0, 0) },
+          );
+          currentY -= 15;
+          page.drawText(
+            'punto de entrega, solicitado por el cliente y aceptado por el chofer, según lo indicado en este ',
+            { x: 60, y: currentY, size: 12, font: font, color: rgb(0, 0, 0) },
+          );
+          currentY -= 15;
+          page.drawText(
+            'documento de confirmación emitido a través de DROVE®',
+            {
+              x: 60,
+              y: currentY,
+              size: 12,
+              font: font,
+              color: rgb(0, 0, 0),
+            },
+          );
+        } else {
+          currentY -= 60;
+          page.drawText(
+            'Confirmo que el dia de hoy solicité un traslado del vehículo nombrado en este documento,',
+            { x: 60, y: currentY, size: 12, font: font, color: rgb(0, 0, 0) },
+          );
+          currentY -= 15;
+          page.drawText('por medio de DROVE@', {
+            x: 60,
+            y: currentY,
+            size: 12,
+            font: font,
+            color: rgb(0, 0, 0),
+          });
+          currentY -= 55;
+          page.drawLine({
+            start: { x: 50, y: currentY },
+            end: { x: 550, y: currentY },
+            thickness: 8,
+            color: rgb(0, 0, 0),
+          });
+        }
+        currentY -= 30;
+        const formattedDate = new Date().toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        });
+        page.drawText(`Fecha de emisión del documento: ${formattedDate}`, {
+          x: 60,
+          y: currentY,
+          size: 9,
+          font: font,
           color: rgb(0, 0, 0),
         });
       }
-      currentY -= 75;
-      const formattedDate = new Date().toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-      page.drawText(`Fecha de emisión del documento: ${formattedDate}`, {
-        x: 60,
-        y: currentY,
-        size: 9,
-        font: font,
-        color: rgb(0, 0, 0),
-      });
+
       const pdfDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
       const dataUriPrefix = 'data:application/pdf;base64,';
       const base64 = pdfDataUri.slice(dataUriPrefix.length);
@@ -1849,7 +2269,7 @@ export class PdfService {
       }
       const usersData = await usersResponse.json();
       // Supongamos que la respuesta tiene la propiedad "collection" con la lista de items
-      const userItem = usersData.dataItems[0].data ?? {};
+      const userItem = usersData?.dataItems[0]?.data ?? {};
 
       // Unir la información obtenida
       const user = {
@@ -1908,8 +2328,8 @@ export class PdfService {
 
       // `data` normalmente tiene la forma { items: [...], totalCount: number, ... }
       // Si quieres retornar el primer elemento encontrado:
-      if (data.dataItems && data.dataItems.length > 0) {
-        return data.dataItems[0].data; // Devuelve el viaje
+      if (data?.dataItems && data?.dataItems?.length > 0) {
+        return data?.dataItems[0]?.data; // Devuelve el viaje
       } else {
         // O devuelve null/undefined si no encuentras un ítem
         return null;
